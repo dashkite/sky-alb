@@ -1,1 +1,1 @@
-# TESTS GO HERE
+import $ from "../src"

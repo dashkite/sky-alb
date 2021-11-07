@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "{{env}} {{name}} custom domain - deployed by Panda Sky"
+Resources:
+
+  {{#with environment.cache.waf}}
+  WAF:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      Parameters:
+        ActivateSqlInjectionProtectionParam: "yes"
+        ActivateCrossSiteScriptingProtectionParam: "yes"
+        ActivateReputationListsProtectionParam: "yes"
+        ActivateBadBotProtectionParam: "yes"
+        ActivateHttpFloodProtectionParam: 'yes - AWS WAF rate based rule'
+        ActivateScannersProbesProtectionParam: 'yes - AWS Lambda log parser'
+        EndpointType: "CloudFront"
+        RequestThreshold: "{{floodThreshold}}"
+        ErrorThreshold: "{{errorThreshold}}"
+        WAFBlockPeriod: "{{blockTTL}}"
+        AppAccessLogBucket: {{logBucket}}
+      Tags:
+        - Key: Substack Type
+          Value: Custom Domain Firewall
+        {{#each @root.tags}}
+        - Key: {{Key}}
+          Value: {{Value}}
+        {{/each}}
+      TemplateURL: "https://s3.amazonaws.com/solutions-reference/aws-waf-security-automations/latest/aws-waf-security-automations.template"
+  {{/with}}
+
+  {{#each environment.hostnames}}
+  CustomDomainCF{{@index}}:
+    Type: "AWS::CloudFront::Distribution"
+    {{#if @root.environment.cache.waf}}
+    DependsOn:
+      - WAF
+    {{/if}}
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - {{.}}
+        Comment: Sky API Domain for {{@root.environment.stack.name}}
+        DefaultCacheBehavior:
+          AllowedMethods: ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+          CachedMethods: ["GET", "HEAD", "OPTIONS"]
+          Compress: false
+          MinTTL: {{@root.environment.cache.ttl.min}}
+          MaxTTL: {{@root.environment.cache.ttl.max}}
+          DefaultTTL: {{@root.environment.cache.ttl.default}}
+          ForwardedValues:
+            Cookies:
+              Forward: "all"
+            {{#if @root.environment.cache.headers.length}}
+            Headers:
+              {{#each @root.environment.cache.headers}}
+              - {{.}}
+              {{/each}}
+            {{/if}}
+            QueryString: true
+            QueryStringCacheKeys: ["*"]
+          SmoothStreaming: false
+          TargetOriginId: {{@root.environment.cache.originID}}
+          ViewerProtocolPolicy: redirect-to-https
+          {{#unless (empty @root.environment.cache.edges)}}
+          LambdaFunctionAssociations:
+            {{#each @root.environment.cache.edges}}
+            - EventType: {{type}}
+              LambdaFunctionARN: {{arn}}
+            {{/each}}
+          {{/unless}}
+
+        {{#with @root.environment.cache.paths}}
+        CacheBehaviors:
+          {{#each .}}
+          - PathPattern: {{path}}
+            MinTTL: {{ttl.min}}
+            MaxTTL: {{ttl.max}}
+            DefaultTTL: {{ttl.default}}
+            AllowedMethods: ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+            CachedMethods: ["GET", "HEAD", "OPTIONS"]
+            Compress: false
+            ForwardedValues:
+              Cookies:
+                Forward: "all"
+              Headers:
+                {{#each @root.environment.cache.headers}}
+                - {{.}}
+                {{/each}}
+              QueryString: true
+              QueryStringCacheKeys: ["*"]
+            SmoothStreaming: false
+            TargetOriginId: {{@root.environment.cache.originID}}
+            ViewerProtocolPolicy: redirect-to-https
+          {{/each}}
+        {{/with}}
+
+        DefaultRootObject: ""
+        Enabled: true
+        HttpVersion: {{@root.environment.cache.httpVersion}}
+        IPV6Enabled: false
+        Origins:
+          - Id: {{@root.environment.cache.originID}}
+            DomainName: {{@root.environment.cache.origin}}
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginKeepaliveTimeout: 60
+              OriginProtocolPolicy: "https-only"
+              OriginReadTimeout: 60
+              OriginSSLProtocols: [ "TLSv1.2" ]
+            OriginCustomHeaders:
+              - HeaderName: x-api-key
+                HeaderValue: '{{@root.environment.apiKey}}'
+        PriceClass: PriceClass_{{@root.environment.cache.priceClass}}
+        ViewerCertificate:
+          AcmCertificateArn: {{@root.environment.cache.certificate}}
+          MinimumProtocolVersion: {{@root.environment.cache.protocol}}
+          SslSupportMethod: "sni-only"
+        {{#if @root.environment.cache.waf}}
+        Logging:
+          Bucket: {{@root.environment.cache.waf.logBucket}}.s3.amazonaws.com
+          IncludeCookies: true
+          Prefix: ""
+        WebACLId: !GetAtt [ WAF, Outputs.WAFWebACLArn ]
+        {{/if}}
+      Tags:
+      {{#each @root.tags}}
+        - Key: {{Key}}
+          Value: {{Value}}
+      {{/each}}
+  {{/each}}
+
+  CustomDomainDNS:
+    Type: "AWS::Route53::RecordSetGroup"
+    DependsOn:
+      {{#each environment.hostnames}}
+      - "CustomDomainCF{{@index}}"
+      {{/each}}
+    Properties:
+      Comment: Sky API Endpoint for {{environment.stack.name}}
+      HostedZoneId: {{environment.cache.hostedzone}}
+      RecordSets:
+        {{#each environment.hostnames}}
+        - Name: {{.}}
+          Type: A
+          AliasTarget:
+            DNSName: !GetAtt [ CustomDomainCF{{@index}}, "DomainName" ]
+            EvaluateTargetHealth: false
+            HostedZoneId: Z2FDTNDATAQYW2
+        {{/each}}
+
+Outputs:
+  CloudFrontDistributions:
+    Value: !Join
+      - ","
+      -
+      {{#each environment.hostnames}}
+        - !Ref CustomDomainCF{{@index}}
+      {{/each}}

@@ -9,3 +9,6 @@ presets:
         - preset: node
           glob:
             - '{src,test}/**/*.coffee'
+  media:
+    glob: 'templates/**/*'
+    target: build/node

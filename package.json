@@ -1,7 +1,7 @@
 {
-  "name": "@dashkite/graphite",
+  "name": "@dashkite/sky-alb",
   "version": "0.0.0",
-  "description": "Graph Database For DynamoDB",
+  "description": "Helpers for deploying Sky APIs",
   "exports": {
     ".": {
       "node": "./build/node/src/index.js"
@@ -39,5 +39,10 @@
     "@dashkite/genie-presets": "^0.5.2"
   },
   "dependencies": {
+    "@dashkite/dolores": "file:../dolores",
+    "@dashkite/joy": "^0.3.14",
+    "@dashkite/template": "file:../template",
+    "fast-glob": "^3.2.7",
+    "handlebars": "^4.7.7"
   }
 }
