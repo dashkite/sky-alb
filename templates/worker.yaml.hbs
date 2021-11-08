@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Panda Sky Worker Defintions
+Resources:
+
+  {{#each environment.workers}}
+  {{#with lambda}}
+  Worker{{titleCase workerName}}Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      {{#if managedPolicies}}
+      ManagedPolicyArns:
+        {{#each managedPolicies}}
+        - {{.}}
+        {{/each}}
+      {{/if}}
+      Policies:
+        - PolicyName: {{name}}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            {{#each policy}}
+              - {{indent 16 (yaml .)}}
+            {{/each}}
+
+  Worker{{titleCase workerName}}Handler:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: "Handler for worker {{@root.name}} {{@root.env}} {{titleCase workerName}}"
+      FunctionName: {{name}}
+
+      Handler: "index.handler"
+      Role: !GetAtt [ Worker{{titleCase workerName}}Role, Arn ]
+      Runtime: {{runtime}}
+      MemorySize: {{memorySize}}
+      Timeout: {{timeout}}
+      TracingConfig:
+        Mode: {{trace}}
+      Tags:
+        {{#each tags}}
+        - Key: {{Key}}
+          Value: {{Value}}
+        {{/each}}
+      Code:
+        S3Bucket: {{code.bucket}}
+        S3Key: {{code.key}}
+
+      {{#if layers}}
+      Layers:
+        {{#each layers}}
+        - {{.}}
+        {{/each}}
+      {{/if}}
+
+  {{#if schedule}}
+  Worker{{titleCase workerName}}ScheduleRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: {{schedule.name}}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            {{#each schedule.policy}}
+              - {{indent 16 (yaml .)}}
+            {{/each}}
+
+  Worker{{titleCase workerName}}Schedule:
+    Type: "AWS::Lambda::Function"
+    DependsOn:
+      - Worker{{titleCase workerName}}ScheduleRole
+    Properties:
+      Description: scheduled invoker for worker {{workerName}}
+      FunctionName: {{schedule.name}}
+      Handler: "index.handler"
+      Role: !GetAtt [ Worker{{titleCase workerName}}ScheduleRole, Arn ]
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Timeout: 30
+      Code:
+        ZipFile: !Sub |
+          var SDK, invoke, lambda;
+
+          SDK = require("aws-sdk");
+
+          lambda = new SDK.Lambda();
+
+          invoke = function(name) {
+            var params;
+            params = {
+              FunctionName: name,
+              InvokeArgs: "{\"scheduledInvocation\": \"true\"}"
+            };
+            return new Promise(function(resolve, reject) {
+              return lambda.invokeAsync(params, function(err, data) {
+                if (err != null) {
+                  return reject(err);
+                } else {
+                  return resolve(data);
+                }
+              });
+            });
+          };
+
+          exports.handler = async function(request, context, callback) {
+            {{#each schedule.targets}}
+            await invoke("{{.}}");
+            {{/each}}
+            return callback(null, "Scheduled Invocation Success");
+          };
+
+
+  Worker{{titleCase workerName}}ScheduleEventRule:
+    Type: "AWS::Events::Rule"
+    DependsOn:
+      - Worker{{titleCase workerName}}Schedule
+    Properties:
+      Description: Sky Scheduled Invoker for {{workerName}}"
+      ScheduleExpression: {{schedule.scheduleExpression}}
+      State: ENABLED
+      Targets:
+        - Id: !Ref Worker{{titleCase workerName}}Schedule
+          Arn: !GetAtt [ Worker{{titleCase workerName}}Schedule, Arn ]
+          Input: '{"scheduledInvocation": true }'
+
+  Worker{{titleCase workerName}}ScheduleEventRole:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+      - Worker{{titleCase workerName}}ScheduleEventRule
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt [ Worker{{titleCase workerName}}Schedule, Arn ]
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt [ Worker{{titleCase workerName}}ScheduleEventRule, Arn ]
+
+  {{/if}}
+  {{/with}}
+  {{/each}}
