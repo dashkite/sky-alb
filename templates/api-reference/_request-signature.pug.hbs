@@ -14,13 +14,13 @@ table
     {{#if request.mediatype}}
     tr
       td Content-Type  
-      td: code {{toJSON request.mediatype}}
+      td: code {{json request.mediatype}}
     {{/if}}
     
     {{#if request.encoding}}
     tr
       td Content-Encoding 
-      td: code {{toJSON request.encoding}}
+      td: code {{json request.encoding}}
     {{/if}}
     
 {{#if request.signed}}

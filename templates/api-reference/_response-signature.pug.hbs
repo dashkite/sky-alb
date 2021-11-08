@@ -4,12 +4,12 @@ table
     {{#if response.mediatype}}
     tr
       td Content-Type(s)  
-      td: code {{toJSON response.mediatype}}
+      td: code {{json response.mediatype}}
     {{/if}}
     {{#if response.encoding}}
     tr
       td Content-Encoding 
-      td: code {{toJSON response.encoding}}
+      td: code {{json response.encoding}}
     {{/if}}
     {{#if (equal (first response.status) 201)}}
     tr
@@ -22,7 +22,7 @@ table
     {{#if (rest response.status)}} 
     tr
       td Other Defined Status
-      td: code {{toJSON (rest response.status)}}
+      td: code {{json (rest response.status)}}
     {{/if}}
     {{#if response.cache}}
     tr
