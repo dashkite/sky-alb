@@ -1,60 +1,17 @@
-{{#with environment.dispatch}}
-DispatchHandler:
-  Type: "AWS::Lambda::Function"
-  Properties:
-    Description: "Handler for {{@root.name}} {{@root.env}}"
-    FunctionName: {{name}}
-
-    Handler: "sky.handler"
-    Role: !GetAtt [ IAMRole, Arn ]
-    Runtime: {{runtime}}
-    MemorySize: {{memorySize}}
-    Timeout: {{timeout}}
-    TracingConfig:
-      Mode: {{trace}}
-    Tags:
-      {{#each tags}}
-      - Key: {{Key}}
-        Value: {{Value}}
-      {{/each}}
-    Code:
-      S3Bucket: {{code.bucket}}
-      S3Key: {{code.key}}
-
-    {{#if layers}}
-    Layers:
-      {{#each layers}}
-      - {{.}}
-      {{/each}}
-    {{/if}}
-
-    {{#if vpc}}
-    VpcConfig:
-      SecurityGroupIds:
-        - !Ref SecurityGroup
-      SubnetIds:
-        - !Ref Subnet1
-        - !Ref Subnet2
-    {{/if}}
-
-{{/with}}
 
 TargetPermission:
   Type: "AWS::Lambda::Permission"
-  DependsOn:
-    - DispatchHandler
   Properties:
-    FunctionName: {{environment.dispatch.arn}}
+    FunctionName: {{arn}}
     Action: 'lambda:InvokeFunction'
     Principal: elasticloadbalancing.amazonaws.com
 
 TargetGroup:
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   DependsOn:
-    - DispatchHandler
     - TargetPermission
   Properties:
     TargetType: lambda
     HealthCheckEnabled: false
     Targets:
-      - Id: !GetAtt [ DispatchHandler, Arn ]
+      - Id: {{arn}}

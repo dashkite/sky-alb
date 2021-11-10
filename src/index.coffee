@@ -1,12 +1,35 @@
+import * as Arr from "@dashkite/joy/array"
+import * as It from "@dashkite/joy/iterable"
+import * as Text from "@dashkite/joy/text"
 import { deployStack } from "@dashkite/dolores/stack"
+import { getCertificate } from "@dashkite/dolores/acm"
+import { getHostedZone } from "@dashkite/dolores/route53"
 import Templates from "@dashkite/template"
 
-deploy = ( description ) ->
+# CURRENT STATUS
+# - generates template
+#
+# TODO
+# - add api-key (use the secrets helpers in dolores/sky-presets)
+
+tld = (domain) -> It.join ".", ( Text.split ".", domain )[-2..]
+
+deployALB = ( description ) ->
   templates = Templates.create "#{__dirname}/../templates"
-  template = await templates.render "main/alb.yaml", description
+  description.sname = Text.capitalize Text.camelCase description.name
+  description.tld ?= tld description.domain
+  description.certificate = arn: ( await getCertificate description.tld ).arn
+  description.zone = id: ( await getHostedZone description.tld ).id
+  # TODO possibly make this overrideable
+  description.zone1 = "us-east-1a"
+  description.zone2 = "us-east-1b"
+  # TODO replace with real key
+  description.apiKey = "12345"
+  description.tags ?= []
+  console.log description
+  template = await templates.render "alb/dispatch.yaml", description
+  # TODO write conversion function into AWS { Key, Value } format if value is supplied
+  console.log template
   deployStack description.name, template
 
-do ->
-  Templates.create "#{__dirname}/../templates"
-
-export default deploy
+export { deployALB }

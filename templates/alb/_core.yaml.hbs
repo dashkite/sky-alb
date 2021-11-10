@@ -1,4 +1,3 @@
-{{#with environment.dispatch}}
 ALBVPC:
   Type: "AWS::EC2::VPC"
   Properties:
@@ -8,7 +7,7 @@ ALBVPC:
     InstanceTenancy: default
     Tags:
       - Key: Name
-        Value: {{name}}
+        Value: {{name}}-vpc
 
 ALBSubnet1:
   DependsOn:
@@ -92,7 +91,7 @@ ALBSecurityGroup:
     - ALBVPC
   Type: "AWS::EC2::SecurityGroup"
   Properties:
-    GroupName: {{name}}
+    GroupName: {{name}}-sg
     GroupDescription: {{name}} Core Security Group
     VpcId: !Ref ALBVPC
 
@@ -126,6 +125,7 @@ LoadBalancer:
     - ALBSubnet1
     - ALBSubnet2
     - ALBSecurityGroup
+    - ALBGatewayAttachment
   Properties:
     Type: application
     Scheme: internet-facing
@@ -147,10 +147,11 @@ LoadBalancer:
         Value: {{albLogBucket}}
       {{/if}}
 
+    {{#if tags}}
     Tags:
-      {{#each @root.tags}}
+      {{#each tags}}
       - Key: {{Key}}
         Value: {{Value}}
       {{/each}}
+    {{/if}}
 
-{{/with}}

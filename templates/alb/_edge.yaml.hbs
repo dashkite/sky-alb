@@ -10,22 +10,21 @@ Listener:
     {{!-- From https://docs.aws.amazon.com/elasticloadbalancing/latest/application/create-https-listener.html It is the most restrictive policy supported as of this writing --}}
     SslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
     Certificates:
-      - CertificateArn: {{environment.dispatch.certificate}}
+      - CertificateArn: {{certificate.arn}}
     DefaultActions:
       - Type: forward
         TargetGroupArn: !Ref TargetGroup
 
-{{#unless environment.isDev}}
 APIKeyMatchSet:
   Type: AWS::WAFRegional::ByteMatchSet
   Properties:
-    Name: API Key Match Set for {{environment.stack.name}}
+    Name: API Key Match Set for {{name}}
     ByteMatchTuples:
       - FieldToMatch:
           Type: HEADER
           Data: x-api-key
         PositionalConstraint: EXACTLY
-        TargetString: '{{environment.apiKey}}'
+        TargetString: '{{apiKey}}'
         TextTransformation: NONE
 
 APIKeyRule:
@@ -33,8 +32,8 @@ APIKeyRule:
   DependsOn:
     - APIKeyMatchSet
   Properties:
-    Name: API Key Rule for {{environment.stack.name}} ALB
-    MetricName: APIKeyRule{{templateCase environment.stack.name}}
+    Name: API Key Rule for {{name}} ALB
+    MetricName: APIKeyRule{{sname}}
     Predicates:
       - Type: ByteMatch
         Negated: false
@@ -45,8 +44,8 @@ WAF:
   DependsOn:
     - APIKeyRule
   Properties:
-    Name: WAF for {{environment.stack.name}} ALB
-    MetricName: {{templateCase environment.stack.name}}
+    Name: WAF for {{name}} ALB
+    MetricName: {{sname}}
     DefaultAction:
       Type: BLOCK
     Rules:
@@ -63,17 +62,16 @@ WAFAssociation:
   Properties:
     ResourceArn: !Ref LoadBalancer
     WebACLId: !Ref WAF
-{{/unless}}
 
 DNS:
   Type: "AWS::Route53::RecordSetGroup"
   DependsOn:
     - Listener
   Properties:
-    Comment: Direct endpoint for Sky API {{environment.stack.name}}
-    HostedZoneId: {{environment.dispatch.hostedzone}}
+    Comment: Direct endpoint for Sky API {{name}}
+    HostedZoneId: {{zone.id}}
     RecordSets:
-      - Name: {{environment.dispatch.hostname}}
+      - Name: {{domain}}
         Type: A
         AliasTarget:
           DNSName: !GetAtt [ LoadBalancer, DNSName ]

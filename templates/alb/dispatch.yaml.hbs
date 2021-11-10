@@ -1,0 +1,9 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Panda Sky Core Resources - Dispatcher {{name}} {{env}}
+Resources:
+
+  {{> alb/core.yaml }}
+
+  {{> alb/lambda.yaml }}
+
+  {{> alb/edge.yaml }}

@@ -4,7 +4,7 @@ Resources:
 
   {{#each environment.cache.edges}}
   {{#with lambda}}
-  Edge{{templateCase type}}Role:
+  Edge{{titleCase type}}Role:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -32,14 +32,14 @@ Resources:
               - {{indent 16 (yaml .)}}
             {{/each}}
 
-  Edge{{templateCase type}}Handler:
+  Edge{{titleCase type}}Handler:
     Type: "AWS::Lambda::Function"
     Properties:
-      Description: "Handler for edge lambda {{@root.name}} {{@root.env}} {{templateCase type}}"
+      Description: "Handler for edge lambda {{@root.name}} {{@root.env}} {{titleCase type}}"
       FunctionName: {{name}}
 
       Handler: "index.handler"
-      Role: !GetAtt [ Edge{{templateCase type}}Role, Arn ]
+      Role: !GetAtt [ Edge{{titleCase type}}Role, Arn ]
       Runtime: {{runtime}}
       MemorySize: {{memorySize}}
       Timeout: {{timeout}}
