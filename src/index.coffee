@@ -4,13 +4,8 @@ import * as Text from "@dashkite/joy/text"
 import { deployStack } from "@dashkite/dolores/stack"
 import { getCertificate } from "@dashkite/dolores/acm"
 import { getHostedZone } from "@dashkite/dolores/route53"
+import { getSecretReference } from "@dashkite/dolores/secrets"
 import Templates from "@dashkite/template"
-
-# CURRENT STATUS
-# - generates template
-#
-# TODO
-# - add api-key (use the secrets helpers in dolores/sky-presets)
 
 tld = (domain) -> It.join ".", ( Text.split ".", domain )[-2..]
 
@@ -24,7 +19,7 @@ deployALB = ( description ) ->
   description.zone1 = "us-east-1a"
   description.zone2 = "us-east-1b"
   # TODO replace with real key
-  description.apiKey = "12345"
+  description.apiKey = await getSecretReference description["api-key"]
   description.tags ?= []
   console.log description
   template = await templates.render "alb/dispatch.yaml", description
