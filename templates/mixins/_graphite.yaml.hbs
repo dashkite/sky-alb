@@ -1,0 +1,61 @@
+{{#each tables}}
+MixinDynamoDBTable{{templateCase .}}:
+  Type: "AWS::DynamoDB::Table"
+  DeletionPolicy: Retain
+  Properties:
+    TableName: {{@root.base}}-{{.}}
+    KeySchema:
+      - AttributeName: origin
+        KeyType: HASH
+      - AttributeName: typeTarget
+        KeyType: RANGE
+    AttributeDefinitions:
+      - AttributeName: origin
+        AttributeType: S
+      - AttributeName: target
+        AttributeType: S
+      - AttributeName: typeOrigin
+        AttributeType: S
+      - AttributeName: typeTarget
+        AttributeType: S
+      - AttributeName: created
+        AttributeType: S
+    BillingMode: PAY_PER_REQUEST
+    GlobalSecondaryIndexes:
+      - IndexName: InEdgesByValue
+        KeySchema:
+          - AttributeName: target
+            KeyType: HASH
+          - AttributeName: typeOrigin
+            KeyType: RANGE
+        Projection:
+          ProjectionType: INCLUDE
+          NonKeyAttributes:
+            - created
+            - stash
+      - IndexName: OutEdgesByTime
+        KeySchema:
+          - AttributeName: typeOrigin
+            KeyType: HASH
+          - AttributeName: created
+            KeyType: RANGE
+        Projection:
+          ProjectionType: INCLUDE
+          NonKeyAttributes:
+            - target
+            - stash
+      - IndexName: InEdgesByTime
+        KeySchema:
+          - AttributeName: typeTarget
+            KeyType: HASH
+          - AttributeName: created
+            KeyType: RANGE
+        Projection:
+          ProjectionType: INCLUDE
+          NonKeyAttributes:
+            - origin
+            - stash
+    TimeToLiveSpecification:
+      AttributeName: dynamoExpires
+      Enabled: true
+{{/each}}

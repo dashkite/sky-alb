@@ -7,3 +7,17 @@ Resources:
   {{> alb/lambda.yaml }}
 
   {{> alb/edge.yaml }}
+
+  {{#if mixins}}
+  {{#each mixins}}
+  
+  {{#if (equal type "graphite") }}
+  {{> mixins/graphite.yaml }}
+  {{/if}}
+
+  {{#if (equal type "s3") }}
+  {{> mixins/s3.yaml }}
+  {{/if}}
+
+  {{/each}}
+  {{/if}}

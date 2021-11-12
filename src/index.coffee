@@ -11,20 +11,18 @@ tld = (domain) -> It.join ".", ( Text.split ".", domain )[-2..]
 
 deployALB = ( description ) ->
   templates = Templates.create "#{__dirname}/../templates"
-  description.sname = Text.capitalize Text.camelCase description.name
+  templates._.h.registerHelper templateCase: (text) ->
+    Text.capitalize Text.camelCase text
   description.tld ?= tld description.domain
   description.certificate = arn: ( await getCertificate description.tld ).arn
   description.zone = id: ( await getHostedZone description.tld ).id
   # TODO possibly make this overrideable
   description.zone1 = "us-east-1a"
   description.zone2 = "us-east-1b"
-  # TODO replace with real key
   description.apiKey = await getSecretReference description["api-key"]
   description.tags ?= []
-  console.log description
   template = await templates.render "alb/dispatch.yaml", description
   # TODO write conversion function into AWS { Key, Value } format if value is supplied
-  console.log template
   deployStack description.name, template
 
 export { deployALB }

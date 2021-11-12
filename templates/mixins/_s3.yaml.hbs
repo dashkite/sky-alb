@@ -1,0 +1,14 @@
+{{#each buckets}}
+MixinS3Bucket{{templateCase .}}:
+  Type: "AWS::S3::Bucket"
+  DeletionPolicy: Retain
+  Properties:
+    BucketName: {{@root.base}}-{{.}}
+    {{#if tags}}
+    Tags:
+    {{#each tags}}
+      - Key: {{key}}
+        Value: {{value}}
+    {{/each}}
+    {{/if}}
+{{/each}}

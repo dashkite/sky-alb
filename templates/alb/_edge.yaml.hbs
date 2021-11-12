@@ -33,7 +33,7 @@ APIKeyRule:
     - APIKeyMatchSet
   Properties:
     Name: API Key Rule for {{name}} ALB
-    MetricName: APIKeyRule{{sname}}
+    MetricName: APIKeyRule{{templateCase name}}
     Predicates:
       - Type: ByteMatch
         Negated: false
@@ -45,7 +45,7 @@ WAF:
     - APIKeyRule
   Properties:
     Name: WAF for {{name}} ALB
-    MetricName: {{sname}}
+    MetricName: {{templateCase name}}
     DefaultAction:
       Type: BLOCK
     Rules:
