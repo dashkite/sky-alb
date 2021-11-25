@@ -15,34 +15,39 @@ Listener:
       - Type: forward
         TargetGroupArn: !Ref TargetGroup
 
-APIKeyMatchSet:
+{{#each headers}}
+APIKeyMatchSet{{templateCase name}}:
   Type: AWS::WAFRegional::ByteMatchSet
   Properties:
     Name: API Key Match Set for {{name}}
     ByteMatchTuples:
       - FieldToMatch:
           Type: HEADER
-          Data: x-api-key
+          Data: {{name}}
         PositionalConstraint: EXACTLY
-        TargetString: '{{{apiKey}}}'
+        TargetString: '{{{value}}}'
         TextTransformation: NONE
 
-APIKeyRule:
+APIKeyRule{{templateCase name}}:
   Type: AWS::WAFRegional::Rule
   DependsOn:
-    - APIKeyMatchSet
+    - APIKeyMatchSet{{templateCase name}}
   Properties:
     Name: API Key Rule for {{name}} ALB
     MetricName: APIKeyRule{{templateCase name}}
     Predicates:
       - Type: ByteMatch
         Negated: false
-        DataId: !Ref APIKeyMatchSet
+        DataId: !Ref APIKeyMatchSet{{templateCase name}}
+{{/each}}
 
+{{#if headers}}
 WAF:
   Type: AWS::WAFRegional::WebACL
   DependsOn:
-    - APIKeyRule
+    {{#each headers}}
+    - APIKeyRule{{templateCase name}}
+    {{/each}}
   Properties:
     Name: WAF for {{name}} ALB
     MetricName: {{templateCase name}}
@@ -62,6 +67,7 @@ WAFAssociation:
   Properties:
     ResourceArn: !Ref LoadBalancer
     WebACLId: !Ref WAF
+{{/if}}
 
 DNS:
   Type: "AWS::Route53::RecordSetGroup"
