@@ -54,10 +54,12 @@ WAF:
     DefaultAction:
       Type: BLOCK
     Rules:
+      {{#each headers}}
       - Action:
           Type: ALLOW
         Priority: 1
-        RuleId: !Ref APIKeyRule
+        RuleId: !Ref APIKeyRule{{templateCase name}}
+      {{/each}}
 
 WAFAssociation:
   Type: AWS::WAFRegional::WebACLAssociation
