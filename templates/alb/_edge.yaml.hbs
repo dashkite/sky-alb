@@ -57,7 +57,7 @@ WAF:
       {{#each headers}}
       - Action:
           Type: ALLOW
-        Priority: 1
+        Priority: {{add @index 1}}
         RuleId: !Ref APIKeyRule{{templateCase name}}
       {{/each}}
 
