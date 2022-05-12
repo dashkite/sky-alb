@@ -1,6 +1,6 @@
 {
   "name": "@dashkite/sky-alb",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Helpers for deploying Sky APIs",
   "exports": {
     ".": {
