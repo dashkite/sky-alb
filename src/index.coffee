@@ -22,6 +22,8 @@ deployALB = ( description ) ->
   templates = Templates.create "#{__dirname}/../templates"
   templates._.h.registerHelper templateCase: (text) ->
     Text.capitalize Text.camelCase text
+  templates._.h.registerHelper add: (value, addend) -> 
+    value + addend
   description.tld ?= tld description.domain
   description.certificate = arn: ( await getCertificate description.tld ).arn
   description.zone = id: ( await getHostedZone description.tld ).id
